@@ -8,96 +8,82 @@ import { NotFoundError } from "../../../../src/shared/errors/NotFoundError";
 import { ValidationError } from "../../../../src/shared/errors/ValidationError";
 
 describe("CreateCardUseCase", () => {
+  const TEST_USER_ID = "user-1";
+  const TEST_CARD_ID = "card-1";
+  const TEST_CARD_NUMBER = "1234123412341234";
+  const TEST_LIMIT_CENTS = 1000;
+  const INVALID_CARD_NUMBER = "1234";
+  
+  const TEST_USER_DATA = {
+    id: TEST_USER_ID,
+    name: "Alice",
+    email: "alice@mail.com",
+    passwordHash: "hash",
+    createdAt: new Date()
+  };
+
+  const TEST_INPUT = {
+    userId: TEST_USER_ID,
+    cardNumber: TEST_CARD_NUMBER,
+    limitCents: TEST_LIMIT_CENTS
+  };
+
+  const createMockUserRepository = (findByIdResult: User | null = null): UserRepository => ({
+    findById: vi.fn().mockResolvedValue(findByIdResult),
+    findByEmail: vi.fn(),
+    save: vi.fn()
+  });
+
+  const createMockCardRepository = (): CardRepository => ({
+    findById: vi.fn(),
+    findByUserId: vi.fn(),
+    save: vi.fn()
+  });
+
+  const createMockIdGenerator = (id: string = TEST_CARD_ID): IdGenerator => ({
+    generate: vi.fn().mockReturnValue(id)
+  });
+
+  const createTestUser = () => User.create(TEST_USER_DATA);
+
+  const createUseCase = (
+    userRepository: UserRepository,
+    cardRepository: CardRepository,
+    idGenerator: IdGenerator
+  ) => new CreateCardUseCase(userRepository, cardRepository, idGenerator);
+
   it("should create card for existing user", async () => {
-    const userRepository: UserRepository = {
-      findById: vi.fn().mockResolvedValue(
-        User.create({
-          id: "user-1",
-          name: "Alice",
-          email: "alice@mail.com",
-          passwordHash: "hash",
-          createdAt: new Date()
-        })
-      ),
-      findByEmail: vi.fn(),
-      save: vi.fn()
-    };
+    const userRepository = createMockUserRepository(createTestUser());
+    const cardRepository = createMockCardRepository();
+    const idGenerator = createMockIdGenerator();
+    const useCase = createUseCase(userRepository, cardRepository, idGenerator);
 
-    const cardRepository: CardRepository = {
-      findById: vi.fn(),
-      findByUserId: vi.fn(),
-      save: vi.fn()
-    };
+    const card = await useCase.execute(TEST_INPUT);
 
-    const idGenerator: IdGenerator = { generate: vi.fn().mockReturnValue("card-1") };
-
-    const useCase = new CreateCardUseCase(userRepository, cardRepository, idGenerator);
-
-    const card = await useCase.execute({
-      userId: "user-1",
-      cardNumber: "1234123412341234",
-      limitCents: 1000
-    });
-
-    expect(card.id).toBe("card-1");
+    expect(card.id).toBe(TEST_CARD_ID);
     expect(card.toJSON().last4).toBe("1234");
     expect(cardRepository.save).toHaveBeenCalledOnce();
   });
 
   it("should fail when user does not exist", async () => {
-    const userRepository: UserRepository = {
-      findById: vi.fn().mockResolvedValue(null),
-      findByEmail: vi.fn(),
-      save: vi.fn()
-    };
+    const userRepository = createMockUserRepository(null);
+    const cardRepository = createMockCardRepository();
+    const idGenerator = createMockIdGenerator();
+    const useCase = createUseCase(userRepository, cardRepository, idGenerator);
 
-    const cardRepository: CardRepository = {
-      findById: vi.fn(),
-      findByUserId: vi.fn(),
-      save: vi.fn()
-    };
-
-    const idGenerator: IdGenerator = { generate: vi.fn().mockReturnValue("card-1") };
-    const useCase = new CreateCardUseCase(userRepository, cardRepository, idGenerator);
-
-    await expect(
-      useCase.execute({
-        userId: "user-1",
-        cardNumber: "1234123412341234",
-        limitCents: 1000
-      })
-    ).rejects.toThrow(NotFoundError);
+    await expect(useCase.execute(TEST_INPUT)).rejects.toThrow(NotFoundError);
   });
 
   it("should fail when card number is invalid", async () => {
-    const userRepository: UserRepository = {
-      findById: vi.fn().mockResolvedValue(
-        User.create({
-          id: "user-1",
-          name: "Alice",
-          email: "alice@mail.com",
-          passwordHash: "hash",
-          createdAt: new Date()
-        })
-      ),
-      findByEmail: vi.fn(),
-      save: vi.fn()
-    };
-
-    const cardRepository: CardRepository = {
-      findById: vi.fn(),
-      findByUserId: vi.fn(),
-      save: vi.fn()
-    };
-
-    const idGenerator: IdGenerator = { generate: vi.fn().mockReturnValue("card-1") };
-    const useCase = new CreateCardUseCase(userRepository, cardRepository, idGenerator);
+    const userRepository = createMockUserRepository(createTestUser());
+    const cardRepository = createMockCardRepository();
+    const idGenerator = createMockIdGenerator();
+    const useCase = createUseCase(userRepository, cardRepository, idGenerator);
 
     await expect(
       useCase.execute({
-        userId: "user-1",
-        cardNumber: "1234",
-        limitCents: 1000
+        ...TEST_INPUT,
+        cardNumber: INVALID_CARD_NUMBER
       })
     ).rejects.toThrow(ValidationError);
   });
