@@ -18,6 +18,32 @@ export const openApiDocument = {
     { name: "Invoices" }
   ],
   components: {
+    parameters: {
+      TransactionIdPath: {
+        name: "transactionId",
+        in: "path",
+        required: true,
+        schema: { type: "string" }
+      }
+    },
+    responses: {
+      TransactionResponse: {
+        description: "Transacao atualizada",
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/TransactionResponse" }
+          }
+        }
+      },
+      ErrorResponse: {
+        description: "Erro",
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/ErrorResponse" }
+          }
+        }
+      }
+    },
     schemas: {
       ErrorResponse: {
         type: "object",
@@ -227,22 +253,10 @@ export const openApiDocument = {
         tags: ["Transactions"],
         summary: "Cancelar transacao",
         parameters: [
-          {
-            name: "transactionId",
-            in: "path",
-            required: true,
-            schema: { type: "string" }
-          }
+          { $ref: "#/components/parameters/TransactionIdPath" }
         ],
         responses: {
-          "200": {
-            description: "Transacao cancelada",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/TransactionResponse" }
-              }
-            }
-          }
+          "200": { $ref: "#/components/responses/TransactionResponse" }
         }
       }
     },
@@ -251,22 +265,10 @@ export const openApiDocument = {
         tags: ["Transactions"],
         summary: "Simular chargeback",
         parameters: [
-          {
-            name: "transactionId",
-            in: "path",
-            required: true,
-            schema: { type: "string" }
-          }
+          { $ref: "#/components/parameters/TransactionIdPath" }
         ],
         responses: {
-          "200": {
-            description: "Chargeback aplicado",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/TransactionResponse" }
-              }
-            }
-          }
+          "200": { $ref: "#/components/responses/TransactionResponse" }
         }
       }
     },
